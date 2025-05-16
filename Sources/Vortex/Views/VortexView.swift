@@ -34,21 +34,14 @@ public struct VortexView<Symbols>: View where Symbols: View {
     /// views to render as particles.
     /// - Parameters:
     ///   - system: The primary particle system you want to render.
-    ///   - symbols: A closure that should return one or more SwiftUI views to use as particles. 
+    ///   - symbols: A closure that should return one or more SwiftUI views to use as particles.
     /// If a closure is not supplied, a default group of symbols will be provided; tagged with
     /// 'circle', 'triangle' and 'sparkle'.
     public init(
         _ system: VortexSystem,
         targetFrameRate: Int = 60,
         @ViewBuilder symbols: () -> Symbols = {
-            Group {
-                Image.circle
-                    .frame(width: 16).blendMode(.plusLighter).tag("circle")
-                Image.confetti
-                    .frame(width: 16, height: 16).blendMode(.plusLighter).tag("confetti")
-                Image.sparkle
-                    .frame(width: 16, height: 16).blendMode(.plusLighter).tag("sparkle")
-            }
+            EmptyView()
         }
     ) {
         _particleSystem = State(initialValue: system)
@@ -61,7 +54,9 @@ public struct VortexView<Symbols>: View where Symbols: View {
     ///   - particleSystem: The particle system to draw.
     ///   - context: The drawing context we're rendering into.
     ///   - size: The size of the space we're rendering into.
-    private func draw(_ particleSystem: VortexSystem, into context: GraphicsContext, at size: CGSize) {
+    private func draw(
+        _ particleSystem: VortexSystem, into context: GraphicsContext, at size: CGSize
+    ) {
         for particle in particleSystem.particles {
             // Find the appropriate tag for this particle.
             guard let symbol = context.resolveSymbol(id: particle.tag) else {
@@ -89,18 +84,19 @@ public struct VortexView<Symbols>: View where Symbols: View {
             // Apply rotation. watchOS does not support 3D rotations, so
             // we fall back to 2D.
             #if os(watchOS)
-            contextCopy.rotate(by: .radians(particle.angle.z))
+                contextCopy.rotate(by: .radians(particle.angle.z))
             #else
-            var transform = CATransform3DIdentity
-            transform = CATransform3DRotate(transform, particle.angle.x, 1, 0, 0)
-            transform = CATransform3DRotate(transform, particle.angle.y, 0, 1, 0)
-            transform = CATransform3DRotate(transform, particle.angle.z, 0, 0, 1)
-            contextCopy.addFilter(.projectionTransform(ProjectionTransform(transform)))
+                var transform = CATransform3DIdentity
+                transform = CATransform3DRotate(transform, particle.angle.x, 1, 0, 0)
+                transform = CATransform3DRotate(transform, particle.angle.y, 0, 1, 0)
+                transform = CATransform3DRotate(transform, particle.angle.z, 0, 0, 1)
+                contextCopy.addFilter(.projectionTransform(ProjectionTransform(transform)))
             #endif
 
             // Apply stretch factor.
             if particleSystem.stretchFactor != 1 {
-                let velocityMagnitude = sqrt(particle.speed.x * particle.speed.x + particle.speed.y * particle.speed.y)
+                let velocityMagnitude = sqrt(
+                    particle.speed.x * particle.speed.x + particle.speed.y * particle.speed.y)
                 let stretch = max(1.0, velocityMagnitude * particleSystem.stretchFactor)
                 let stretchDirection = atan2(particle.speed.y, particle.speed.x)
                 contextCopy.rotate(by: .radians(stretchDirection + .pi / 2))
